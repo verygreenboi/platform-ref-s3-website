@@ -1,0 +1,58 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    crossplane.io/provider: aws
+  name: xdnszones.example.upbound.io
+spec:
+  compositeTypeRef:
+    apiVersion: example.upbound.io/v1alpha1
+    kind: XDNSZone
+  patchSets:
+  - name: providerConfigRef
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.providerConfigRef.name
+      toFieldPath: spec.providerConfigRef.name
+  - name: region
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.region
+      toFieldPath: spec.forProvider.region
+  - name: deletionPolicy
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.deletionPolicy
+      toFieldPath: spec.deletionPolicy
+  - name: userTags
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.tags
+      toFieldPath: spec.forProvider.tags
+      policy:
+        mergeOptions:
+          appendSlice: true
+          keepMapValues: false
+
+  resources:
+  - name: Zone
+    base:
+      apiVersion: route53.aws.upbound.io/v1beta1
+      kind: Zone
+      metadata:
+        labels:
+          resource: Zone
+    patches:
+    - patchSetName: providerConfigRef
+      type: PatchSet
+    - patchSetName: region
+      type: PatchSet
+    - patchSetName: deletionPolicy
+      type: PatchSet
+    - patchSetName: userTags
+      type: PatchSet
+    - fromFieldPath: spec.parameters.domain.zoneName
+      toFieldPath: spec.forProvider.name
+    - fromFieldPath: status.atProvider.zoneId
+      toFieldPath: status.hostedzone.zoneId
+      type: ToCompositeFieldPath

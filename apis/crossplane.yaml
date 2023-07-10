@@ -1,0 +1,39 @@
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Configuration
+metadata:
+  name: platform-ref-s3-website
+  annotations:
+    meta.crossplane.io/maintainer: Upbound <support@upbound.io>
+    meta.crossplane.io/source: github.com/upbound/platform-ref-s3-website
+    meta.crossplane.io/license: Apache-2.0
+    meta.crossplane.io/description: |
+      This reference platform Configuration for Amazon S3 static website hosting
+      is a starting point to build, run, and operate Amazon S3 to host a static website.
+      On a static website, individual webpages include static content.
+      They might also contain client-side scripts.
+    meta.crossplane.io/readme: |
+      This reference platform Configuration for Amazon S3 static website hosting
+      is a starting point to build, run, and operate Amazon S3 to host a static website.
+      On a static website, individual webpages include static content.
+      They might also contain client-side scripts.
+
+      This Configuration uses Amazon S3, CDN service primitives from the [Upbound Official AWS
+      Provider](https://marketplace.upbound.io/providers/upbound/provider-aws).
+
+      To learn more checkout the [GitHub
+      repo](https://github.com/upbound/platform-ref-s3-website/) that you can copy and
+      customize to meet the exact needs of your organization!
+spec:
+  crossplane:
+    version: ">=v1.12.1-0"
+  dependsOn:
+  - provider: xpkg.upbound.io/upbound/provider-family-aws
+    version: ">=v0.37.0"
+  - provider: xpkg.upbound.io/upbound/provider-aws-cloudfront
+    version: ">=v0.37.0"
+  - provider: xpkg.upbound.io/upbound/provider-aws-s3
+    version: ">=v0.37.0"
+  - provider: xpkg.upbound.io/upbound/provider-aws-route53
+    version: ">=v0.37.0"
+  - provider: xpkg.upbound.io/upbound/provider-aws-acm
+    version: ">=v0.37.0"

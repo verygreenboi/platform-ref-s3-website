@@ -1,0 +1,15 @@
+apiVersion: example.upbound.io/v1alpha1
+kind: DNSZone
+metadata:
+  name: demo
+  namespace: demo-website
+spec:
+  deletionPolicy: Delete
+  parameters:
+    domain:
+      zoneName: website.myhostcloud.de
+    region: eu-central-1
+    tags:
+      CostReference: PSP-12345
+  providerConfigRef:
+    name: default

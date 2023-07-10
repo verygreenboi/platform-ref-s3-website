@@ -1,0 +1,384 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    crossplane.io/provider: aws
+  name: xwebsites.example.upbound.io
+spec:
+  compositeTypeRef:
+    apiVersion: example.upbound.io/v1alpha1
+    kind: XWebsite
+  patchSets:
+  - name: providerConfigRef
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.providerConfigRef.name
+      toFieldPath: spec.providerConfigRef.name
+  - name: region
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.region
+      toFieldPath: spec.forProvider.region
+  - name: deletionPolicy
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.deletionPolicy
+      toFieldPath: spec.deletionPolicy
+  - name: userTags
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.tags
+      toFieldPath: spec.forProvider.tags
+      policy:
+        mergeOptions:
+          appendSlice: true
+          keepMapValues: false
+
+  resources:
+  - name: cdn-distribution
+    base:
+      apiVersion: cloudfront.aws.upbound.io/v1beta1
+      kind: Distribution
+      metadata:
+        labels:
+          resource: Distribution
+      spec:
+        forProvider:
+          customErrorResponses:
+          - errorCachingMinTtl: 10
+            errorCode: 403
+            responseCode: "200"
+            responsePagePath: /
+          - errorCachingMinTtl: 10
+            errorCode: 404
+            responseCode: "200"
+            responsePagePath: /
+          defaultCacheBehavior:
+          - allowedMethods:
+            - HEAD
+            - GET
+            - OPTIONS
+            cachedMethods:
+            - HEAD
+            - GET
+            cachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # cache-disabled
+            targetOriginId: s3Origin
+            viewerProtocolPolicy: redirect-to-https
+          defaultRootObject: index.html
+          enabled: true
+          origin:
+          - originId: s3Origin
+          viewerCertificate:
+          - cloudFrontDefaultCertificate: false
+            minimumProtocolVersion: TLSv1.2_2021
+            sslSupportMethod: sni-only
+          restrictions:
+          - geoRestriction:
+            - restrictionType: none
+    patches:
+    - patchSetName: providerConfigRef
+      type: PatchSet
+    - patchSetName: region
+      type: PatchSet
+    - patchSetName: deletionPolicy
+      type: PatchSet
+    - patchSetName: userTags
+      type: PatchSet
+    - fromFieldPath: spec.parameters.enabled
+      toFieldPath: spec.forProvider.enabled
+    - fromFieldPath: spec.parameters.defaultRootObject
+      toFieldPath: spec.forProvider.defaultRootObject
+    - fromFieldPath: spec.parameters.description
+      toFieldPath: spec.forProvider.comment
+    - combine:
+        strategy: string
+        string:
+          fmt: '%s.s3.%s.amazonaws.com'
+        variables:
+        - fromFieldPath: spec.parameters.bucket.name
+        - fromFieldPath: spec.parameters.region
+      toFieldPath: spec.forProvider.origin[0].domainName
+      type: CombineFromComposite
+    - fromFieldPath: spec.parameters.bucket.path
+      toFieldPath: spec.forProvider.origin[0].originPath
+    - fromFieldPath: status.atProvider.domainName
+      toFieldPath: status.cloudfront.domain
+      type: ToCompositeFieldPath
+    - fromFieldPath: status.atProvider.arn
+      toFieldPath: status.cloudfront.arn
+      type: ToCompositeFieldPath
+    - fromFieldPath: status.cloudfront.oai
+      policy:
+        fromFieldPath: Required
+      toFieldPath: spec.forProvider.origin[0].s3OriginConfig[0].originAccessIdentity
+      transforms:
+      - string:
+          fmt: origin-access-identity/cloudfront/%s
+        type: string
+    - fromFieldPath: spec.parameters.domain.name
+      toFieldPath: spec.forProvider.aliases[0]
+    - fromFieldPath: status.certificate.arn
+      toFieldPath: spec.forProvider.viewerCertificate[0].acmCertificateArn
+
+  - name: cdn-oai
+    base:
+      apiVersion: cloudfront.aws.upbound.io/v1beta1
+      kind: OriginAccessIdentity
+      metadata:
+        labels:
+          resource: OriginAccessIdentity
+    patches:
+    - patchSetName: providerConfigRef
+      type: PatchSet
+    - patchSetName: region
+      type: PatchSet
+    - patchSetName: deletionPolicy
+      type: PatchSet
+    - fromFieldPath: metadata.name
+      toFieldPath: spec.forProvider.comment
+    - fromFieldPath: status.atProvider.id
+      toFieldPath: status.cloudfront.oai
+      type: ToCompositeFieldPath
+
+  - name: s3-bucket
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: Bucket
+      metadata:
+        labels:
+          resource: Bucket
+      spec:
+        forProvider:
+          acl: private
+          publicAccessBlockConfiguration:
+            blockPublicAcls: true
+            blockPublicPolicy: true
+            ignorePublicAcls: true
+            restrictPublicBuckets: true
+          serverSideEncryptionConfiguration:
+            rules:
+            - applyServerSideEncryptionByDefault:
+                sseAlgorithm: AES256
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - type: PatchSet
+      patchSetName: userTags
+    - fromFieldPath: spec.parameters.bucket.forceDestroy
+      toFieldPath: spec.forProvider.forceDestroy
+    - fromFieldPath: spec.parameters.bucket.name
+      toFieldPath: metadata.name
+    - type: ToCompositeFieldPath
+      fromFieldPath: metadata.annotations[crossplane.io/external-name]
+      toFieldPath: status.s3.name
+    - type: ToCompositeFieldPath
+      fromFieldPath: status.atProvider.arn
+      toFieldPath: status.s3.arn
+
+  - name: s3-blockpublicaccess
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: BucketPublicAccessBlock
+      metadata:
+        labels:
+          resource: BucketPublicAccessBlock
+      spec:
+        forProvider:
+          lockPublicAcls: true
+          blockPublicPolicy: true
+          ignorePublicAcls: true
+          restrictPublicBuckets: true
+          bucketSelector:
+            matchControllerRef: true
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - type: PatchSet
+      patchSetName: userTags
+
+  - name: s3-serversideencryption
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: BucketServerSideEncryptionConfiguration
+      metadata:
+        labels:
+          resource: BucketServerSideEncryptionConfiguration
+      spec:
+        forProvider:
+          bucketSelector:
+            matchControllerRef: true
+          rule:
+          - applyServerSideEncryptionByDefault:
+            - sseAlgorithm: AES256
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - type: PatchSet
+      patchSetName: userTags
+
+  - name: s3-bucketVersioning
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: BucketVersioning
+      metadata:
+        labels:
+          resource: BucketVersioning
+      spec:
+        forProvider:
+          bucketSelector:
+            matchControllerRef: true
+          versioningConfiguration:
+          - status: Enabled
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+
+  - name: s3-bucket-policy
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: BucketPolicy
+      metadata:
+        labels:
+          resource: BucketPolicy
+      spec:
+        forProvider:
+          bucketSelector:
+            matchControllerRef: true
+    patches:
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - combine:
+        strategy: string
+        string:
+          fmt: |-
+            {
+                "Version": "2008-10-17",
+                "Id": "PolicyForCloudFrontPrivateContent",
+                "Statement": [
+                    {
+                        "Sid": "AllowAccessForOAI",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity %s"
+                        },
+                        "Action": "s3:GetObject",
+                        "Resource": "arn:aws:s3:::%s/*"
+                    }
+                ]
+            }
+        variables:
+        - fromFieldPath: status.cloudfront.oai
+        - fromFieldPath: spec.parameters.bucket.name
+      policy:
+        fromFieldPath: Required
+      toFieldPath: spec.forProvider.policy
+      type: CombineFromComposite
+
+  - name: acm-certificate-us
+    base:
+      apiVersion: acm.aws.upbound.io/v1beta1
+      kind: Certificate
+      metadata:
+        labels:
+          resource: Certificate
+      spec:
+        forProvider:
+          region: us-east-1
+          validationMethod: DNS
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - fromFieldPath: spec.parameters.domain.name
+      toFieldPath: spec.forProvider.domainName
+    - fromFieldPath: status.atProvider.arn
+      toFieldPath: status.certificate.arn
+      type: ToCompositeFieldPath
+    - fromFieldPath: status.atProvider.domainValidationOptions
+      toFieldPath: status.certificate.domainValidationOptions
+      type: ToCompositeFieldPath
+
+  - name: a-record-cdn
+    base:
+      apiVersion: route53.aws.upbound.io/v1beta1
+      kind: Record
+      metadata:
+        labels:
+          resource: Record
+          type: A
+      spec:
+        forProvider:
+          alias:
+          - evaluateTargetHealth: false
+            zoneId: Z2FDTNDATAQYW2
+          type: A
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - fromFieldPath: spec.parameters.domain.name
+      toFieldPath: spec.forProvider.name
+    - fromFieldPath: spec.parameters.domain.zoneId
+      toFieldPath: spec.forProvider.zoneId
+    - fromFieldPath: status.cloudfront.domain
+      policy:
+        fromFieldPath: Required
+      toFieldPath: spec.forProvider.alias[0].name
+
+  - name: cname-validation-record
+    base:
+      apiVersion: route53.aws.upbound.io/v1beta1
+      kind: Record
+      metadata:
+        labels:
+          resource: Record
+          type: CNAME
+      spec:
+        forProvider:
+          ttl: 300
+    patches:
+    - type: PatchSet
+      patchSetName: providerConfigRef
+    - type: PatchSet
+      patchSetName: region
+    - type: PatchSet
+      patchSetName: deletionPolicy
+    - fromFieldPath: spec.parameters.domain.zoneId
+      toFieldPath: spec.forProvider.zoneId
+    - fromFieldPath: status.certificate.domainValidationOptions[0].resourceRecordName
+      policy:
+        fromFieldPath: Required
+      toFieldPath: spec.forProvider.name
+    - fromFieldPath: status.certificate.domainValidationOptions[0].resourceRecordValue
+      policy:
+        fromFieldPath: Required
+      toFieldPath: spec.forProvider.records[0]
+    - fromFieldPath: status.certificate.domainValidationOptions[0].resourceRecordType
+      policy:
+        fromFieldPath: Required
+      toFieldPath: spec.forProvider.type
