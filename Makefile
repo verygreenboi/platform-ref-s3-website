@@ -11,10 +11,10 @@ PLATFORMS ?= linux_amd64
 # ====================================================================================
 # Setup Kubernetes tools
 
-UP_VERSION = v0.16.1
+UP_VERSION = v0.18.0
 UP_CHANNEL = stable
 UPTEST_VERSION = v0.5.0
-UPTEST_CLAIMS = examples/website.yaml
+UPTEST_CLAIMS = examples/website.yaml,examples/content.yaml
 # ====================================================================================
 # Setup Helm
 
@@ -26,7 +26,6 @@ HELM_CHART_LINT_ARGS_$(PROJECT_NAME) = --set nameOverride='',imagePullSecrets=''
 HELM_CHARTS_DIR ?= $(ROOT_DIR)/chart
 
 -include build/makelib/k8s_tools.mk
-# -include makelib/helmoci.mk
 
 # ====================================================================================
 # Setup XPKG
@@ -80,4 +79,3 @@ uptest: $(UPTEST) $(KUBECTL) $(KUTTL)
 e2e: build controlplane.up local.xpkg.deploy.configuration.$(PROJECT_NAME) uptest
 
 .PHONY: uptest e2e
-

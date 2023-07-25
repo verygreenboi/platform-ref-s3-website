@@ -19,7 +19,7 @@ spec:
 
       </body>
       </html>
-    region: eu-central-1
+    region: us-east-1
     tags:
       CostReference: PSP-12345
   providerConfigRef:

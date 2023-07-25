@@ -13,10 +13,10 @@ spec:
     defaultRootObject: index.html
     description: platform-ref-s3-website
     domain:
-      name: demo.website.myhostcloud.de
-      zoneId: Z033029419NV7XCJOKZ9I
+      name: demo.website.upboundrocks.cloud
+      zoneId: Z0115025YFQ7ZQF6BJ6N
     enabled: true
-    region: eu-central-1
+    region: us-east-1
     tags:
       CostReference: PSP-12345
   providerConfigRef:

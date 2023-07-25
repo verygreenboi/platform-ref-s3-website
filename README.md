@@ -1,26 +1,51 @@
 # platform-ref-s3-website
 
-This repository defines a [Crossplane configuration package](https://docs.crossplane.io/v1.11/concepts/packages/#configuration-packages) that demonstrates provisioning and hosting static s3 websites.
+This repository defines a [Crossplane configuration package](https://docs.crossplane.io/latest/concepts/packages/#configuration-packages) that demonstrates provisioning and hosting static s3 websites.
 
 ## Composition Overview
 
-This reference platform Configuration for Amazon S3 static website hosting
-is a starting point to build, run, and operate Amazon S3 to host a static website.
-On a static website, individual webpages include static content.
-They might also contain client-side scripts.
+The Amazon S3 static website hosting reference platform configuration serves as a foundation for building, running, and managing a static website using Amazon S3. A static website primarily consists of webpages that include fixed content and may incorporate client-side scripts.
 
 ```mermaid
-graph TD;
-    XWebsite
-    XContent-->XWebsite
-    XDNSZone-->XWebsite
+flowchart LR
+
+subgraph "XWebsite"
+    CloudFront_Distribution["CloudFront \n Distribution"]
+    CloudFront_Origin["CloudFront \n OriginAccessIdentity"]
+    ACM_Certificate["ACM \n Certificate"]
+    Route53_Record["Route53 \n A-Record"]
+    Route53_Record2["Route53 \n CNAME"]
+    S3_Bucket["S3 \n Bucket"]
+
+    CloudFront_Distribution -->|Restricts Access| CloudFront_Origin
+    CloudFront_Distribution --> Route53_Record
+    ACM_Certificate --> Route53_Record2
+    ACM_Certificate --> CloudFront_Distribution
+    CloudFront_Distribution -->|Serves| S3_Bucket
+end
+
+subgraph "XContent"
+    Object["S3 \n Object"]
+    Object --> |Uploads| S3_Bucket
+end
+
+subgraph "XDNSZone"
+    Zone["Route53 \n Zone"]
+    Route53_Record --> Zone
+    Route53_Record2 --> Zone
+end
 ```
 
 - [XWebsite](apis/XWebsite/): creates s3,cdn,acm,route53 configuration for static website hosting
   - [XContent](apis/XContent/): creates s3 object for static website hosting
   - [XDNSZone](apis/XDNSZone/): creates route53 public DNS Zone (use only if needed)
-  
+
 ## Deploying the Reference Platform
+
+> **Note:** Before proceeding with the setup of the Amazon S3 static website hosting reference platform, please ensure that you have a working Route 53 Zone associated with your AWS Account. The Route 53 zone is essential to manage DNS records and route traffic to your website.
+> If you already have a working Route 53 Zone with the domain you intend to use, you can proceed with the configuration of the static S3 website hosting. However, if you do not have a Route 53 zone set up for your domain, you must first create one. You may want to follow an example `example/zone.yaml` to ensure your zone is working correctly. 
+> Once the Route 53 zone is in place, you can continue with the Amazon S3 static website hosting reference platform. 
+
 
 First you will need access to a Kubernetes cluster. Ensure you are
 using the correct context:
@@ -54,7 +79,7 @@ provider.pkg.crossplane.io/provider-aws-s3 created
 You can keep track of the provider install:
 
 ```console
-kubectl get -f examples/provider-aws-scoped.yaml  
+kubectl get -f examples/provider-aws-scoped.yaml
 ```
 
 All the providers should be `INSTALLED` and `HEALTHY` within a minute or two:
@@ -100,10 +125,19 @@ There are many options we can use to authenticate to AWS, but to sim
 kubectl create secret generic aws-creds -n upbound-system --from-file=creds=./creds.conf
 ```
 
-### Configure the Provider with AWS Credentials
+## Authenticating with AWS
 
-We will create the following `ProviderConfig` object to use the AWS credentials
-from the previous step. See [AUTHENTICATION](https://github.com/upbound/provider-aws/blob/main/AUTHENTICATION.md) for more authentication options like IRSA.
+Once Crossplane, the Provider, and all the Compositions are installed, the next step is to provide AWS credentials to the Provider. This is achieved by creating a ProviderConfig.
+
+For simplicity, we will use the following method to authenticate with AWS:
+
+```sh
+kubectl create secret generic aws-creds -n upbound-system --from-file=creds=./creds.conf
+```
+
+### Configuring the Provider with AWS Credentials
+
+To configure the Provider with the AWS credentials obtained in the previous step, create the following `ProviderConfig` object. For more authentication options, such as IRSA, refer to  [AUTHENTICATION](https://github.com/upbound/provider-aws/blob/main/AUTHENTICATION.md).
 
 ```yaml
 apiVersion: aws.upbound.io/v1beta1
@@ -119,16 +153,18 @@ spec:
       key: creds
 ```
 
+Apply the configuration using the command:
+
 ```console
 kubectl apply -f examples/providerconfig-creds.yaml
 ```
 
-We're now ready to deploy the examples.
+Now, the examples are ready to be deployed.
 
 Using files in the `examples` directory:
 
 ```console
-kubectl apply -f ns.yaml
+kubectl apply -f examples/ns.yaml
 kubectl apply -f examples/website.yaml
 kubectl apply -f examples/content.yaml
 ```
@@ -166,7 +202,7 @@ kubectl get managed
 Delete the Compositions, Providers, and ProviderConfig after all the resources have been deleted.
 
 ```console
-kubectl delete -f ns.yaml
+kubectl delete -f examples/ns.yaml
 kubectl delete -f apis/XWebsite
 kubectl delete -f apis/XContent
 kubectl delete -f examples/providerconfig-creds.yaml

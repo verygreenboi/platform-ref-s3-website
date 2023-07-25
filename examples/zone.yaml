@@ -4,11 +4,11 @@ metadata:
   name: demo
   namespace: demo-website
 spec:
-  deletionPolicy: Delete
+  deletionPolicy: Orphan
   parameters:
     domain:
-      zoneName: website.myhostcloud.de
-    region: eu-central-1
+      zoneName: website.example.cloud
+    region: us-east-1
     tags:
       CostReference: PSP-12345
   providerConfigRef:
