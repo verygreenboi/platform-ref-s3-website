@@ -1,0 +1,23 @@
+apiVersion: example.upbound.io/v1alpha1
+kind: Website
+metadata:
+  name: website
+  namespace: demo-website
+spec:
+  deletionPolicy: Delete
+  parameters:
+    bucket:
+      name: platform-ref-s3-website
+      path: /static
+      forceDestroy: true
+    defaultRootObject: index.html
+    description: platform-ref-s3-website
+    domain:
+      name: demo.website.upboundrocks.cloud
+      zoneId: Z0115025YFQ7ZQF6BJ6N
+    enabled: true
+    region: us-east-1
+    tags:
+      CostReference: PSP-12345
+  providerConfigRef:
+    name: default

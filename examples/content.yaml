@@ -1,0 +1,26 @@
+apiVersion: example.upbound.io/v1alpha1
+kind: Content
+metadata:
+  name: demo
+  namespace: demo-website
+spec:
+  deletionPolicy: Delete
+  parameters:
+    bucket:
+      name: platform-ref-s3-website
+      path: /static
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <body>
+
+      <h1>The future of cloud is</h1>
+      <b>up.</b>
+
+      </body>
+      </html>
+    region: us-east-1
+    tags:
+      CostReference: PSP-12345
+  providerConfigRef:
+    name: default

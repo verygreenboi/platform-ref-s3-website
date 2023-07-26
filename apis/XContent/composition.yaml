@@ -1,0 +1,68 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    crossplane.io/provider: aws
+  name: xcontents.example.upbound.io
+spec:
+  compositeTypeRef:
+    apiVersion: example.upbound.io/v1alpha1
+    kind: XContent
+  patchSets:
+  - name: providerConfigRef
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.providerConfigRef.name
+      toFieldPath: spec.providerConfigRef.name
+  - name: region
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.region
+      toFieldPath: spec.forProvider.region
+  - name: deletionPolicy
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.deletionPolicy
+      toFieldPath: spec.deletionPolicy
+  - name: userTags
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.tags
+      toFieldPath: spec.forProvider.tags
+      policy:
+        mergeOptions:
+          appendSlice: true
+          keepMapValues: false
+
+  resources:
+  - name: Object
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: BucketObject
+      metadata:
+        labels:
+          resource: BucketObject
+      spec:
+        forProvider:
+          contentType: text/html
+    patches:
+    - patchSetName: providerConfigRef
+      type: PatchSet
+    - patchSetName: region
+      type: PatchSet
+    - patchSetName: deletionPolicy
+      type: PatchSet
+    - patchSetName: userTags
+      type: PatchSet
+    - fromFieldPath: spec.parameters.bucket.name
+      toFieldPath: spec.forProvider.bucketRef.name
+    - fromFieldPath: spec.parameters.content
+      toFieldPath: spec.forProvider.content
+    - combine:
+        strategy: string
+        string:
+          fmt: '%s/index.html'
+        variables:
+        - fromFieldPath: spec.parameters.bucket.path
+      toFieldPath: spec.forProvider.key
+      type: CombineFromComposite

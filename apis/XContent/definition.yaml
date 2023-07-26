@@ -1,0 +1,75 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xcontents.example.upbound.io
+spec:
+  claimNames:
+    kind: Content
+    plural: contents
+  group: example.upbound.io
+  names:
+    categories:
+    - websites
+    - composition
+    - crossplane
+    kind: XContent
+    plural: xcontents
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                description: s3 object content configuration parameters.
+                properties:
+                  region:
+                    type: string
+                    description: Region is the region youre bucket is located.
+                  bucket:
+                    description: "Bucket Name and Path to place content"
+                    properties:
+                      name:
+                        description: The name of the bucket to add static content.
+                        type: string
+                      path:
+                        description: The path in the Bucket to add content.
+                        type: string
+                    type: object
+                  content:
+                    description: Literal string value to use as the object content, which will be uploaded as UTF-8-encoded text.
+                    type: string
+                  tags:
+                    description: Map of additional AWS Tags to add to resources
+                    additionalProperties:
+                      type: string
+                    type: object
+              deletionPolicy:
+                type: string
+                description: DeletionPolicy specifies what will happen to the underlying external when this managed resource is deleted - either "Delete" or "Orphan" the external resource.
+              providerConfigRef:
+                type: object
+                description: crossplane provider credentials to use.
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+            required:
+            - parameters
+            - deletionPolicy
+            - providerConfigRef
+          status:
+            properties:
+              content:
+                description: Useful values generated from the S3 API.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+                type: object
+            type: object
