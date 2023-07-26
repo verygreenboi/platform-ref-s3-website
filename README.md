@@ -199,6 +199,7 @@ kubectl delete -f examples/ns.yaml
 kubectl delete -f apis/XWebsite
 kubectl delete -f apis/XContent
 kubectl delete -f examples/providerconfig-creds.yaml
+kubectl delete -f examples/configuration.yaml
 kubectl delete -f examples/provider-aws-scoped.yaml
 ```
 
