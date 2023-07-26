@@ -40,7 +40,7 @@ end
   - [XContent](apis/XContent/): creates s3 object for static website hosting
   - [XDNSZone](apis/XDNSZone/): creates route53 public DNS Zone (use only if needed)
 
-## Deploying the Reference Platform
+## Prerequisites
 
 > **Note:** Before proceeding with the setup of the Amazon S3 static website hosting reference platform, please ensure that you have a working Route 53 Zone associated with your AWS Account. The Route 53 zone is essential to manage DNS records and route traffic to your website.
 > If you already have a working Route 53 Zone with the domain you intend to use, you can proceed with the configuration of the static S3 website hosting. However, if you do not have a Route 53 zone set up for your domain, you must first create one. You may want to follow an example `example/zone.yaml` to ensure your zone is working correctly. 
@@ -64,32 +64,25 @@ up uxp install
 UXP 1.12.1-up.1 installed
 ```
 
-Install the AWS Provider:
+You can validate the install by inspecting all installed components:
 
 ```console
-kubectl apply -f examples/provider-aws-scoped.yaml
+kubectl get all -n upbound-system
+```
+### Install the S3 Website Reference Platform
 
-provider.pkg.crossplane.io/provider-family-aws created
-provider.pkg.crossplane.io/provider-aws-acm created
-provider.pkg.crossplane.io/provider-aws-cloudfront created
-provider.pkg.crossplane.io/provider-aws-route53 configured
-provider.pkg.crossplane.io/provider-aws-s3 created
+Now you can install this reference platform.
+
+```console
+kubectl apply -f examples/configuration.yaml
 ```
 
-You can keep track of the provider install:
+Validate the install by inspecting the provider and configuration packages:
 
 ```console
-kubectl get -f examples/provider-aws-scoped.yaml
-```
+kubectl get providers,providerrevision
 
-All the providers should be `INSTALLED` and `HEALTHY` within a minute or two:
-
-```console
-providerrevision.pkg.crossplane.io/provider-aws-acm-cd915da2bc0f          True      1          xpkg.upbound.io/upbound/provider-aws-acm:v0.37.0          Active   1           1               113m
-providerrevision.pkg.crossplane.io/provider-aws-cloudfront-9da29e4a8982   True      1          xpkg.upbound.io/upbound/provider-aws-cloudfront:v0.37.0   Active   1           1               113m
-providerrevision.pkg.crossplane.io/provider-aws-route53-27d581b1b384      True      1          xpkg.upbound.io/upbound/provider-aws-route53:v0.37.0      Active   1           1               113m
-providerrevision.pkg.crossplane.io/provider-aws-s3-dbc7f981d81f           True      1          xpkg.upbound.io/upbound/provider-aws-s3:v0.37.0           Active   1           1               113m
-providerrevision.pkg.crossplane.io/provider-family-aws-d095ac1e13dd       True      1          xpkg.upbound.io/upbound/provider-family-aws:v0.37.0       Active                               7d4h
+kubectl get configurations,configurationrevisions
 ```
 
 Next, install the CompositeResourceDefinitions and Compositions:
@@ -206,6 +199,7 @@ kubectl delete -f examples/ns.yaml
 kubectl delete -f apis/XWebsite
 kubectl delete -f apis/XContent
 kubectl delete -f examples/providerconfig-creds.yaml
+kubectl delete -f examples/configuration.yaml
 kubectl delete -f examples/provider-aws-scoped.yaml
 ```
 
