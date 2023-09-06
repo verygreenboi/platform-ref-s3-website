@@ -261,7 +261,6 @@ spec:
           bucketSelector:
             matchControllerRef: true
     patches:
-    patches:
     - type: PatchSet
       patchSetName: providerConfigRef
     - type: PatchSet
